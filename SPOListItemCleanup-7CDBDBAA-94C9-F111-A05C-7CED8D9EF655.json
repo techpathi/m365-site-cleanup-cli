@@ -1,0 +1,1651 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_sharepointonline": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedsharepointonline_b7f32"
+        },
+        "api": {
+          "name": "shared_sharepointonline"
+        }
+      },
+      "shared_office365": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedoffice365_c6b6d"
+        },
+        "api": {
+          "name": "shared_office365"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "Run Mode (mr_RunMode)": {
+          "defaultValue": "Execute",
+          "type": "String",
+          "metadata": {
+            "schemaName": "mr_RunMode",
+            "description": "Execute or DryRun"
+          }
+        },
+        "Master Config List Title (mr_MasterConfigListName)": {
+          "defaultValue": "SP List Form Configurations",
+          "type": "String",
+          "metadata": {
+            "schemaName": "mr_MasterConfigListName",
+            "description": "List title of the Master Config list"
+          }
+        },
+        "Extender Child Mapping List Name  (mr_ExtenderChildMappingListName)": {
+          "defaultValue": "SPFx Form Target Lists",
+          "type": "String",
+          "metadata": {
+            "schemaName": "mr_ExtenderChildMappingListName",
+            "description": "List title of the new list that contains the child lists of the extenders"
+          }
+        },
+        "Use Recycle Bin (mr_UseRecycleBin)": {
+          "defaultValue": false,
+          "type": "Bool",
+          "metadata": {
+            "schemaName": "mr_UseRecycleBin",
+            "description": "Delete to recycle bin or permanent delete"
+          }
+        },
+        "Site Url (mr_SiteUrl)": {
+          "defaultValue": "https://mydev26.sharepoint.com/sites/dev",
+          "type": "String",
+          "metadata": {
+            "schemaName": "mr_SiteUrl",
+            "description": "URL of the site where all the lists are"
+          }
+        },
+        "Environment Name (mr_Environment)": {
+          "defaultValue": "Development",
+          "type": "String",
+          "metadata": {
+            "schemaName": "mr_Environment",
+            "description": "Name of the environment - dev / staging / prod - for logging purpose only"
+          }
+        },
+        "Email Alert To Addresses (mr_AlertToEmails)": {
+          "defaultValue": "VenkatG@mydev26.onmicrosoft.com;VenkatG@mydev26.onmicrosoft.com",
+          "type": "String",
+          "metadata": {
+            "schemaName": "mr_AlertToEmails",
+            "description": "List of email addresses to send email alerts- separate multiple values by semicolon"
+          }
+        }
+      },
+      "triggers": {
+        "Recurrence": {
+          "recurrence": {
+            "interval": 1,
+            "frequency": "Day",
+            "timeZone": "India Standard Time",
+            "schedule": {
+              "hours": [
+                "19"
+              ],
+              "minutes": [
+                25
+              ]
+            }
+          },
+          "type": "Recurrence",
+          "conditions": []
+        }
+      },
+      "actions": {
+        "Init_varSiteUrl": {
+          "runAfter": {
+            "Init_varUseRecycleBin": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "03b0ade0-c1a1-4fc1-8236-37cf0f9b25fd"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varSiteUrl",
+                "type": "string",
+                "value": "@parameters('Site Url (mr_SiteUrl)')"
+              }
+            ]
+          }
+        },
+        "Initialize_varEnvironment": {
+          "runAfter": {
+            "Init_varMode": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "06fc4c2b-8e4b-470d-911b-eef991da78f8"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varEnvironment",
+                "type": "string",
+                "value": "@parameters('Environment Name (mr_Environment)')"
+              }
+            ]
+          }
+        },
+        "Init_varMode": {
+          "runAfter": {
+            "Init_varSiteUrl": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "bbdd5137-1b0c-46e6-b2c5-92461d2ae1cf"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varMode",
+                "type": "string",
+                "value": "@parameters('Run Mode (mr_RunMode)')"
+              }
+            ]
+          }
+        },
+        "Init_varCleanupDateField": {
+          "runAfter": {
+            "Initialize_varEnvironment": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "323a37e2-6e7d-4c6e-9a2c-2658838e5b0c"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varCleanupDateField",
+                "type": "string",
+                "value": "CleanupTestDate"
+              }
+            ]
+          }
+        },
+        "Init_varMaxCandidatesPerList": {
+          "runAfter": {
+            "Initialize_varToEmails": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "50c01e81-75d8-4163-9285-d808c820ffbc"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varMaxCandidatesPerList",
+                "type": "integer",
+                "value": 50000
+              }
+            ]
+          }
+        },
+        "Init_varBatchSize": {
+          "runAfter": {
+            "Init_varMaxCandidatesPerList": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "2d37124d-d8f4-4343-be0b-bb7d2fc740b1"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varBatchSize",
+                "type": "integer",
+                "value": 100
+              }
+            ]
+          }
+        },
+        "Init_varThrottleDelaySec": {
+          "runAfter": {
+            "Init_varBatchSize": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "1171ba2d-ec70-4ded-bb9f-cd7914234025"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varThrottleDelaySec",
+                "type": "integer",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "Init_varRunId": {
+          "runAfter": {
+            "Init_varThrottleDelaySec": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "c04d6e54-de06-4846-a123-e201bcd6e113"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varRunId",
+                "type": "string",
+                "value": "@{concat(formatDateTime(utcNow(),'yyyyMMdd_HHmmss'),'-',guid())}"
+              }
+            ]
+          }
+        },
+        "Init_varTotalCandidates": {
+          "runAfter": {
+            "Init_varRunId": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "7010248e-fe43-4251-8ce2-f73a74f48de4"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varTotalCandidates",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "Init_varTotalDeleted": {
+          "runAfter": {
+            "Init_varTotalCandidates": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "f56c14bd-8e14-4ef9-b4fc-c2e4a704ae27"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varTotalDeleted",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "Init_varTotalFailed": {
+          "runAfter": {
+            "Init_varTotalDeleted": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "94129007-9f71-4ea7-957c-8af31041dae0"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varTotalFailed",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "Init_varConfigsProcessed": {
+          "runAfter": {
+            "Init_varTotalFailed": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "9a2f1f64-d848-46f6-a1fa-349420278c7b"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varConfigsProcessed",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "Init_varConfigsSkipped": {
+          "runAfter": {
+            "Init_varConfigsProcessed": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "9a0d406c-25ea-4f8f-957f-f50eca1088ad"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varConfigsSkipped",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "Init_varLastId": {
+          "runAfter": {
+            "Init_varConfigsSkipped": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "6701d0ce-d987-4693-99be-de0b7301c454"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varLastId",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "Init_varListComplete": {
+          "runAfter": {
+            "Init_varLastId": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "2ab673b0-054f-49bf-875d-96bb30c164e8"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varListComplete",
+                "type": "boolean",
+                "value": false
+              }
+            ]
+          }
+        },
+        "Init_varListCandidateCount": {
+          "runAfter": {
+            "Init_varListComplete": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "9290a1eb-04f1-4e0e-8c2b-fe12e93815a5"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varListCandidateCount",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "Init_varBatchItems": {
+          "runAfter": {
+            "Init_varListCandidateCount": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "9071ab64-ed27-4a11-a494-8d05bd5306b1"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varBatchItems",
+                "type": "array",
+                "value": []
+              }
+            ]
+          }
+        },
+        "Compose_ProtectedLists": {
+          "runAfter": {
+            "Initialize_varFailedItems": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "d28f9feb-be35-4c66-af40-463e0cb601a8"
+          },
+          "type": "Compose",
+          "inputs": [
+            "@parameters('Master Config List Title (mr_MasterConfigListName)')",
+            "@parameters('Extender Child Mapping List Name  (mr_ExtenderChildMappingListName)')"
+          ]
+        },
+        "Compose_AllowedSites": {
+          "runAfter": {
+            "Compose_ProtectedLists": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "c886350f-e883-4a46-b8b7-cb194212f9dc"
+          },
+          "type": "Compose",
+          "inputs": [
+            "@parameters('Site Url (mr_SiteUrl)')"
+          ]
+        },
+        "Is_Site_Allowed": {
+          "actions": {},
+          "runAfter": {
+            "Compose_AllowedSites": [
+              "Succeeded"
+            ]
+          },
+          "else": {
+            "actions": {
+              "Terminate": {
+                "metadata": {
+                  "operationMetadataId": "d9a778a8-29aa-4d77-9031-d7c255758a38"
+                },
+                "type": "Terminate",
+                "inputs": {
+                  "runStatus": "Failed",
+                  "runError": {
+                    "code": "SiteNotAllowed",
+                    "message": "Target site is not present in AllowedSites whitelist."
+                  }
+                }
+              }
+            }
+          },
+          "expression": {
+            "equals": [
+              "@contains(outputs('Compose_AllowedSites'), variables('varSiteUrl'))",
+              true
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "184cb3f3-3d20-4b95-826b-9aab6c8e0d1b"
+          },
+          "type": "If"
+        },
+        "Production_Date_Field_Guard": {
+          "actions": {
+            "Terminate_2": {
+              "metadata": {
+                "operationMetadataId": "440cc332-f1d9-41cc-a130-da238e27b58f"
+              },
+              "type": "Terminate",
+              "inputs": {
+                "runStatus": "Failed",
+                "runError": {
+                  "code": "InvalidDateField",
+                  "message": "CleanupTestDate cannot be used in Production. Must use Created or Modified."
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Is_Site_Allowed": [
+              "Succeeded"
+            ]
+          },
+          "else": {
+            "actions": {}
+          },
+          "expression": {
+            "equals": [
+              "@and(equals(variables('varEnvironment'), 'Production'), equals(variables('varCleanupDateField'), 'CleanupTestDate'))",
+              true
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "da40bc5c-6159-46b7-ac7e-3bd7f75bad1b"
+          },
+          "type": "If"
+        },
+        "Query_Active_Configs": {
+          "runAfter": {
+            "Production_Date_Field_Guard": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "3c0e5f3f-684f-49a5-b864-092578253cdb"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "@variables('varSiteUrl')",
+              "parameters/method": "POST",
+              "parameters/uri": "_api/web/lists/getbytitle('@{variables('varMasterConfigListName')}')/GetItems",
+              "parameters/headers": {
+                "Accept": "application/json;odata=nometadata",
+                "Content-Type": "application/json;odata=nometadata"
+              },
+              "parameters/body": "{\n  \"query\": {\n    \"ViewXml\": \"<View><Query><Where><And><Eq><FieldRef Name='Is_x0020_Active'/><Value Type='Boolean'>1</Value></Eq><IsNotNull><FieldRef Name='DaysToDelete'/></IsNotNull></And></Where><OrderBy><FieldRef Name='ID' Ascending='TRUE'/></OrderBy></Query></View>\"\n  }\n}"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "operationId": "HttpRequest",
+              "connectionName": "shared_sharepointonline"
+            },
+            "retryPolicy": {
+              "type": "exponential",
+              "count": 3,
+              "interval": "PT5S",
+              "maximumInterval": "PT30S"
+            }
+          }
+        },
+        "Parse_Active_Configs": {
+          "runAfter": {
+            "Query_Active_Configs": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "da444c53-aa13-4b09-840f-93f0da8d6981"
+          },
+          "type": "ParseJson",
+          "inputs": {
+            "content": "@body('Query_Active_Configs')",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "ID": {
+                        "type": "integer"
+                      },
+                      "Title": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "Form_x0020_Type": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "Form_x0020_List_x0020_Name": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "DaysToDelete": {
+                        "type": [
+                          "number",
+                          "null"
+                        ]
+                      },
+                      "Is_x0020_Active": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "Any_active_configs_found": {
+          "actions": {},
+          "runAfter": {
+            "Parse_Active_Configs": [
+              "Succeeded"
+            ]
+          },
+          "else": {
+            "actions": {
+              "Terminate_1": {
+                "type": "Terminate",
+                "inputs": {
+                  "runStatus": "Succeeded"
+                }
+              }
+            }
+          },
+          "expression": {
+            "and": [
+              {
+                "greater": [
+                  "@length(body('Parse_Active_Configs')?['value'])",
+                  0
+                ]
+              }
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "406aa380-10a0-4cde-a3b2-269f9336fafc"
+          },
+          "type": "If"
+        },
+        "Each_Config": {
+          "foreach": "@body('Parse_Active_Configs')?['value']",
+          "actions": {
+            "Compose_CutoffDate": {
+              "type": "Compose",
+              "inputs": "@formatDateTime(addDays(utcNow(), mul(-1, int(items('Each_Config')?['DaysToDelete']))), 'yyyy-MM-ddTHH:mm:ssZ')"
+            },
+            "Switch": {
+              "runAfter": {
+                "Compose_CutoffDate": [
+                  "Succeeded"
+                ]
+              },
+              "cases": {
+                "SharePoint_List_Form_(Standard_Single_List)": {
+                  "case": "SharePoint List Form",
+                  "actions": {
+                    "List_name_exists": {
+                      "actions": {
+                        "Compose_TargetLists_Standard": {
+                          "type": "Compose",
+                          "inputs": [
+                            {
+                              "ListName": "@{items('Each_Config')?['Form_x0020_List_x0020_Name']}",
+                              "SiteUrl": "@{variables('varSiteUrl')}"
+                            }
+                          ]
+                        }
+                      },
+                      "else": {
+                        "actions": {
+                          "Increment_varConfigsSkipped_for_standard_list": {
+                            "type": "IncrementVariable",
+                            "inputs": {
+                              "name": "varConfigsSkipped",
+                              "value": 1
+                            }
+                          }
+                        }
+                      },
+                      "expression": {
+                        "and": [
+                          {
+                            "equals": [
+                              "@empty(items('Each_Config')?['Form_x0020_List_x0020_Name'])",
+                              false
+                            ]
+                          }
+                        ]
+                      },
+                      "type": "If"
+                    }
+                  }
+                },
+                "SPFx_List_Form_Extender_(Multi-List_Child_Mapping)": {
+                  "case": "SPFx List Form Extender",
+                  "actions": {
+                    "Query_Child_Mappings": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "dataset": "@variables('varSiteUrl')",
+                          "parameters/method": "POST",
+                          "parameters/uri": "_api/web/lists/getbytitle('@{variables('varExtenderChildMappingListName')}')/GetItems",
+                          "parameters/headers": {
+                            "Accept": "application/json;odata=nometadata",
+                            "Content-Type": "application/json;odata=nometadata"
+                          },
+                          "parameters/body": "{\n  \"query\": {\n    \"ViewXml\": \"<View><Query><Where><And><Eq><FieldRef Name='ParentFormConfig' LookupId='TRUE'/><Value Type='Lookup'>@{items('Each_Config')?['ID']}</Value></Eq><Eq><FieldRef Name='IsActive'/><Value Type='Boolean'>1</Value></Eq></And></Where></Query></View>\"\n  }\n}"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                          "operationId": "HttpRequest",
+                          "connectionName": "shared_sharepointonline"
+                        }
+                      }
+                    },
+                    "Child_mappings_exist": {
+                      "actions": {},
+                      "runAfter": {
+                        "Query_Child_Mappings": [
+                          "Succeeded"
+                        ]
+                      },
+                      "else": {
+                        "actions": {
+                          "Increment_varConfigsSkipped": {
+                            "type": "IncrementVariable",
+                            "inputs": {
+                              "name": "varConfigsSkipped",
+                              "value": 1
+                            }
+                          }
+                        }
+                      },
+                      "expression": {
+                        "and": [
+                          {
+                            "greater": [
+                              "@length(body('Query_Child_Mappings')?['value'])",
+                              0
+                            ]
+                          }
+                        ]
+                      },
+                      "type": "If"
+                    },
+                    "Select_Map_Child_Targets": {
+                      "runAfter": {
+                        "Is_Parent_List_Name_Set": [
+                          "Succeeded"
+                        ]
+                      },
+                      "type": "Select",
+                      "inputs": {
+                        "from": "@body('Query_Child_Mappings')?['value']",
+                        "select": {
+                          "ListName": "@{item()?['ChildListName']}",
+                          "SiteUrl": "@{if(empty(item()?['TargetSiteUrl']), variables('varSiteUrl'), item()?['TargetSiteUrl'])}"
+                        }
+                      }
+                    },
+                    "Compose_TargetLists_Extender": {
+                      "runAfter": {
+                        "Select_Map_Child_Targets": [
+                          "Succeeded"
+                        ]
+                      },
+                      "type": "Compose",
+                      "inputs": "@union(\n    if(\n      empty(items('Each_Config')?['Form_x0020_List_x0020_Name']),\n      json('[]'),\n      outputs('Compose_ParentListTarget')\n    ),\n    body('Select_Map_Child_Targets')\n  )"
+                    },
+                    "Is_Parent_List_Name_Set": {
+                      "actions": {
+                        "Compose_ParentListTarget": {
+                          "type": "Compose",
+                          "inputs": [
+                            {
+                              "ListName": "@{items('Each_Config')?['Form_x0020_List_x0020_Name']}",
+                              "SiteUrl": "@{variables('varSiteUrl')}"
+                            }
+                          ]
+                        }
+                      },
+                      "runAfter": {
+                        "Child_mappings_exist": [
+                          "Succeeded"
+                        ]
+                      },
+                      "else": {
+                        "actions": {}
+                      },
+                      "expression": {
+                        "and": [
+                          {
+                            "equals": [
+                              "@empty(items('Each_Config')?['Form_x0020_List_x0020_Name'])",
+                              false
+                            ]
+                          }
+                        ]
+                      },
+                      "type": "If"
+                    }
+                  }
+                }
+              },
+              "default": {
+                "actions": {
+                  "Increment_varConfigsSkipped_2": {
+                    "type": "IncrementVariable",
+                    "inputs": {
+                      "name": "varConfigsSkipped",
+                      "value": 1
+                    }
+                  }
+                }
+              },
+              "expression": "@items('Each_Config')?['Form_x0020_Type']",
+              "type": "Switch"
+            },
+            "Compose_ResolvedTargetLists": {
+              "runAfter": {
+                "Switch": [
+                  "Succeeded",
+                  "Skipped"
+                ]
+              },
+              "type": "Compose",
+              "inputs": "@if(\n  equals(items('Each_Config')?['Form_x0020_Type'], 'SharePoint List Form'),\n  outputs('Compose_TargetLists_Standard'),\n  if(\n    equals(items('Each_Config')?['Form_x0020_Type'], 'SPFx List Form Extender'),\n    outputs('Compose_TargetLists_Extender'),\n    json('[]')\n  )\n)"
+            },
+            "Increment_varConfigsProcessed": {
+              "runAfter": {
+                "Compose_ResolvedTargetLists": [
+                  "Succeeded"
+                ]
+              },
+              "type": "IncrementVariable",
+              "inputs": {
+                "name": "varConfigsProcessed",
+                "value": 1
+              }
+            },
+            "Each_TargetList": {
+              "foreach": "@outputs('Compose_ResolvedTargetLists')",
+              "actions": {
+                "Is_Protected_List": {
+                  "actions": {},
+                  "else": {
+                    "actions": {
+                      "Check_Target_List": {
+                        "type": "OpenApiConnection",
+                        "inputs": {
+                          "parameters": {
+                            "dataset": "@items('Each_TargetList')?['SiteUrl']",
+                            "parameters/method": "GET",
+                            "parameters/uri": "_api/web/lists/getbytitle('@{items('Each_TargetList')?['ListName']}')?$select=Id,Title,ItemCount",
+                            "parameters/headers": {
+                              "Accept": "application/json;odata=nometadata"
+                            }
+                          },
+                          "host": {
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                            "operationId": "HttpRequest",
+                            "connectionName": "shared_sharepointonline"
+                          }
+                        }
+                      },
+                      "List_exists": {
+                        "actions": {
+                          "Check_Date_Field": {
+                            "type": "OpenApiConnection",
+                            "inputs": {
+                              "parameters": {
+                                "dataset": "@items('Each_TargetList')?['SiteUrl']",
+                                "parameters/method": "GET",
+                                "parameters/uri": "_api/web/lists/getbytitle('@{items('Each_TargetList')?['ListName']}')/fields?$filter=InternalName eq '@{variables('varCleanupDateField')}' or Title eq '@{variables('varCleanupDateField')}'&$select=InternalName,Title,TypeAsString&$top=1",
+                                "parameters/headers": {
+                                  "Accept": "application/json;odata=nometadata"
+                                }
+                              },
+                              "host": {
+                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                                "operationId": "HttpRequest",
+                                "connectionName": "shared_sharepointonline"
+                              }
+                            }
+                          },
+                          "Date_field_found": {
+                            "actions": {
+                              "Compose_ResolvedDateInternalName": {
+                                "type": "Compose",
+                                "inputs": "@first(body('Check_Date_Field')?['value'])?['InternalName']"
+                              }
+                            },
+                            "runAfter": {
+                              "Check_Date_Field": [
+                                "Succeeded"
+                              ]
+                            },
+                            "else": {
+                              "actions": {}
+                            },
+                            "expression": {
+                              "and": [
+                                {
+                                  "greater": [
+                                    "@length(body('Check_Date_Field')?['value'])",
+                                    0
+                                  ]
+                                }
+                              ]
+                            },
+                            "type": "If"
+                          }
+                        },
+                        "runAfter": {
+                          "Check_Target_List": [
+                            "Succeeded",
+                            "Failed"
+                          ]
+                        },
+                        "else": {
+                          "actions": {}
+                        },
+                        "expression": {
+                          "and": [
+                            {
+                              "equals": [
+                                "@outputs('Check_Target_List')['statusCode']",
+                                200
+                              ]
+                            }
+                          ]
+                        },
+                        "type": "If"
+                      },
+                      "Reset_varLastId": {
+                        "runAfter": {
+                          "List_exists": [
+                            "Succeeded"
+                          ]
+                        },
+                        "type": "SetVariable",
+                        "inputs": {
+                          "name": "varLastId",
+                          "value": 0
+                        }
+                      },
+                      "Reset_varListComplete": {
+                        "runAfter": {
+                          "Reset_varLastId": [
+                            "Succeeded"
+                          ]
+                        },
+                        "type": "SetVariable",
+                        "inputs": {
+                          "name": "varListComplete",
+                          "value": false
+                        }
+                      },
+                      "Reset_varListCandidateCount": {
+                        "runAfter": {
+                          "Reset_varListComplete": [
+                            "Succeeded"
+                          ]
+                        },
+                        "type": "SetVariable",
+                        "inputs": {
+                          "name": "varListCandidateCount",
+                          "value": 0
+                        }
+                      },
+                      "TargetList_ExecutionScope": {
+                        "actions": {
+                          "Process_Target_List_in_Keyset_Batches": {
+                            "actions": {
+                              "Compose_CamlQuery_Keyset": {
+                                "type": "Compose",
+                                "inputs": "@if(equals(variables('varLastId'), 0), concat('<View><Query><Where><Lt><FieldRef Name=''', variables('varCleanupDateField'), '''/><Value Type=''DateTime'' IncludeTimeValue=''TRUE''>', outputs('Compose_CutoffDate'), '</Value></Lt></Where><OrderBy><FieldRef Name=''ID'' Ascending=''TRUE''/></OrderBy></Query><ViewFields><FieldRef Name=''ID''/><FieldRef Name=''Title''/><FieldRef Name=''', variables('varCleanupDateField'), '''/></ViewFields><RowLimit Paged=''TRUE''>', variables('varBatchSize'), '</RowLimit></View>'), concat('<View><Query><Where><And><Gt><FieldRef Name=''ID''/><Value Type=''Counter''>', variables('varLastId'), '</Value></Gt><Lt><FieldRef Name=''', variables('varCleanupDateField'), '''/><Value Type=''DateTime'' IncludeTimeValue=''TRUE''>', outputs('Compose_CutoffDate'), '</Value></Lt></And></Where><OrderBy><FieldRef Name=''ID'' Ascending=''TRUE''/></OrderBy></Query><ViewFields><FieldRef Name=''ID''/><FieldRef Name=''Title''/><FieldRef Name=''', variables('varCleanupDateField'), '''/></ViewFields><RowLimit Paged=''TRUE''>', variables('varBatchSize'), '</RowLimit></View>'))"
+                              },
+                              "Fetch_Batch_Page": {
+                                "runAfter": {
+                                  "Compose_CamlQuery_Keyset": [
+                                    "Succeeded"
+                                  ]
+                                },
+                                "type": "OpenApiConnection",
+                                "inputs": {
+                                  "parameters": {
+                                    "dataset": "@items('Each_TargetList')?['SiteUrl']",
+                                    "parameters/method": "POST",
+                                    "parameters/uri": "_api/web/lists/getbytitle('@{items('Each_TargetList')?['ListName']}')/RenderListDataAsStream\n",
+                                    "parameters/headers": {
+                                      "Accept": "application/json;odata=nometadata",
+                                      "Content-Type": "application/json;odata=nometadata"
+                                    },
+                                    "parameters/body": "{\n  \"parameters\": {\n    \"RenderOptions\": 2,\n    \"ViewXml\": \"@{outputs('Compose_CamlQuery_Keyset')}\"\n  }\n}"
+                                  },
+                                  "host": {
+                                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                                    "operationId": "HttpRequest",
+                                    "connectionName": "shared_sharepointonline"
+                                  },
+                                  "retryPolicy": {
+                                    "type": "exponential",
+                                    "count": 3,
+                                    "interval": "PT5S",
+                                    "maximumInterval": "PT30S"
+                                  }
+                                }
+                              },
+                              "Compose_CurrentBatchItems": {
+                                "runAfter": {
+                                  "Fetch_Batch_Page": [
+                                    "Succeeded"
+                                  ]
+                                },
+                                "type": "Compose",
+                                "inputs": "@body('Fetch_Batch_Page')?['Row']\n\n  \n\n  \n\n  "
+                              },
+                              "Compose_CurrentBatchCount_": {
+                                "runAfter": {
+                                  "Compose_CurrentBatchItems": [
+                                    "Succeeded"
+                                  ]
+                                },
+                                "type": "Compose",
+                                "inputs": "@length(outputs('Compose_CurrentBatchItems'))\n\n  "
+                              },
+                              "Are_there_NO_items_in_this_batch": {
+                                "actions": {
+                                  "Set_varListComplete_to_true": {
+                                    "type": "SetVariable",
+                                    "inputs": {
+                                      "name": "varListComplete",
+                                      "value": true
+                                    }
+                                  }
+                                },
+                                "runAfter": {
+                                  "Compose_CurrentBatchCount_": [
+                                    "Succeeded"
+                                  ]
+                                },
+                                "else": {
+                                  "actions": {
+                                    "Increment_varListCandidateCount_": {
+                                      "type": "IncrementVariable",
+                                      "inputs": {
+                                        "name": "varListCandidateCount",
+                                        "value": "@outputs('Compose_CurrentBatchCount_')"
+                                      }
+                                    },
+                                    "Increment_varTotalCandidates": {
+                                      "runAfter": {
+                                        "Increment_varListCandidateCount_": [
+                                          "Succeeded"
+                                        ]
+                                      },
+                                      "type": "IncrementVariable",
+                                      "inputs": {
+                                        "name": "varTotalCandidates",
+                                        "value": "@outputs('Compose_CurrentBatchCount_')"
+                                      }
+                                    },
+                                    "Safety_Ceiling_Check_for_max_items_to_process_to_avoid_mass_deletion": {
+                                      "actions": {
+                                        "Set_varListComplete_to__true": {
+                                          "type": "SetVariable",
+                                          "inputs": {
+                                            "name": "varListComplete",
+                                            "value": true
+                                          }
+                                        }
+                                      },
+                                      "runAfter": {
+                                        "Increment_varTotalCandidates": [
+                                          "Succeeded"
+                                        ]
+                                      },
+                                      "else": {
+                                        "actions": {}
+                                      },
+                                      "expression": {
+                                        "and": [
+                                          {
+                                            "greater": [
+                                              "@variables('varListCandidateCount')",
+                                              "@variables('varMaxCandidatesPerList')"
+                                            ]
+                                          }
+                                        ]
+                                      },
+                                      "type": "If"
+                                    },
+                                    "Is_Execute_mode": {
+                                      "actions": {
+                                        "Compose_BatchGuid": {
+                                          "type": "Compose",
+                                          "inputs": "@concat('batch_', guid())"
+                                        },
+                                        "Compose_ChangesetGuid": {
+                                          "runAfter": {
+                                            "Compose_BatchGuid": [
+                                              "Succeeded"
+                                            ]
+                                          },
+                                          "type": "Compose",
+                                          "inputs": "@concat('changeset_', guid())"
+                                        },
+                                        "Select_Build_Individual_Delete_Operations": {
+                                          "runAfter": {
+                                            "Compose_ChangesetGuid": [
+                                              "Succeeded"
+                                            ]
+                                          },
+                                          "type": "Select",
+                                          "inputs": {
+                                            "from": "@outputs('Compose_CurrentBatchItems')",
+                                            "select": "@if(\n  variables('varUseRecycleBin'),\n  concat(\n    '--', outputs('Compose_ChangesetGuid'), decodeUriComponent('%0D%0A'),\n    'Content-Type: application/http', decodeUriComponent('%0D%0A'),\n    'Content-Transfer-Encoding: binary', decodeUriComponent('%0D%0A'),\n    decodeUriComponent('%0D%0A'),\n    'POST ', items('Each_TargetList')?['SiteUrl'], '/_api/web/lists/getbytitle(''', items('Each_TargetList')?['ListName'], ''')/items(', item()?['ID'], ')/recycle() HTTP/1.1', decodeUriComponent('%0D%0A'),\n    'Accept: application/json;odata=nometadata', decodeUriComponent('%0D%0A'),\n    'Content-Length: 0', decodeUriComponent('%0D%0A'),\n    decodeUriComponent('%0D%0A')\n  ),\n  concat(\n    '--', outputs('Compose_ChangesetGuid'), decodeUriComponent('%0D%0A'),\n    'Content-Type: application/http', decodeUriComponent('%0D%0A'),\n    'Content-Transfer-Encoding: binary', decodeUriComponent('%0D%0A'),\n    decodeUriComponent('%0D%0A'),\n    'DELETE ', items('Each_TargetList')?['SiteUrl'], '/_api/web/lists/getbytitle(''', items('Each_TargetList')?['ListName'], ''')/items(', item()?['ID'], ') HTTP/1.1', decodeUriComponent('%0D%0A'),\n    'Accept: application/json;odata=nometadata', decodeUriComponent('%0D%0A'),\n    'IF-MATCH: *', decodeUriComponent('%0D%0A'),\n    'Content-Length: 0', decodeUriComponent('%0D%0A'),\n    decodeUriComponent('%0D%0A')\n  )\n)"
+                                          }
+                                        },
+                                        "Compose_JoinedOperations": {
+                                          "runAfter": {
+                                            "Select_Build_Individual_Delete_Operations": [
+                                              "Succeeded"
+                                            ]
+                                          },
+                                          "type": "Compose",
+                                          "inputs": "@join(body('Select_Build_Individual_Delete_Operations'), '')"
+                                        },
+                                        "Compose_FullBatchPayload": {
+                                          "runAfter": {
+                                            "Compose_JoinedOperations": [
+                                              "Succeeded"
+                                            ]
+                                          },
+                                          "type": "Compose",
+                                          "inputs": "@concat('--', outputs('Compose_BatchGuid'), decodeUriComponent('%0D%0A'), 'Content-Type: multipart/mixed; boundary=', outputs('Compose_ChangesetGuid'), decodeUriComponent('%0D%0A'), decodeUriComponent('%0D%0A'), outputs('Compose_JoinedOperations'), '--', outputs('Compose_ChangesetGuid'), '--', decodeUriComponent('%0D%0A'), '--', outputs('Compose_BatchGuid'), '--', decodeUriComponent('%0D%0A'))"
+                                        },
+                                        "Execute_Batch": {
+                                          "runAfter": {
+                                            "Compose_FullBatchPayload": [
+                                              "Succeeded",
+                                              "Failed"
+                                            ]
+                                          },
+                                          "type": "OpenApiConnection",
+                                          "inputs": {
+                                            "parameters": {
+                                              "dataset": "@items('Each_TargetList')?['SiteUrl']",
+                                              "parameters/method": "POST",
+                                              "parameters/uri": "_api/$batch",
+                                              "parameters/headers": {
+                                                "Accept": "application/json;odata=nometadata",
+                                                "Content-Type": "multipart/mixed; boundary=@{outputs('Compose_BatchGuid')}"
+                                              },
+                                              "parameters/body": "@outputs('Compose_FullBatchPayload')"
+                                            },
+                                            "host": {
+                                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                                              "operationId": "HttpRequest",
+                                              "connectionName": "shared_sharepointonline"
+                                            },
+                                            "retryPolicy": {
+                                              "type": "exponential",
+                                              "count": 3,
+                                              "interval": "PT5S",
+                                              "maximumInterval": "PT20S"
+                                            }
+                                          }
+                                        },
+                                        "Set_varLastId": {
+                                          "runAfter": {
+                                            "Has_Failed_Items_in_Batch": [
+                                              "Succeeded"
+                                            ]
+                                          },
+                                          "type": "SetVariable",
+                                          "inputs": {
+                                            "name": "varLastId",
+                                            "value": "@last(outputs('Compose_CurrentBatchItems'))?['ID']"
+                                          }
+                                        },
+                                        "is_this_the_last_batch": {
+                                          "actions": {
+                                            "Set_varListComplete": {
+                                              "type": "SetVariable",
+                                              "inputs": {
+                                                "name": "varListComplete",
+                                                "value": true
+                                              }
+                                            }
+                                          },
+                                          "runAfter": {
+                                            "Set_varLastId": [
+                                              "Succeeded"
+                                            ]
+                                          },
+                                          "else": {
+                                            "actions": {
+                                              "Delay": {
+                                                "type": "Wait",
+                                                "inputs": {
+                                                  "interval": {
+                                                    "count": "@variables('varThrottleDelaySec')",
+                                                    "unit": "Second"
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          },
+                                          "expression": {
+                                            "and": [
+                                              {
+                                                "less": [
+                                                  "@outputs('Compose_CurrentBatchCount_')",
+                                                  "@variables('varBatchSize')"
+                                                ]
+                                              }
+                                            ]
+                                          },
+                                          "type": "If"
+                                        },
+                                        "Filter_Succeeded": {
+                                          "runAfter": {
+                                            "Execute_Batch": [
+                                              "Succeeded"
+                                            ]
+                                          },
+                                          "type": "Query",
+                                          "inputs": {
+                                            "from": "@body('Execute_Batch')?['$multipart']\n\n  \n\n  ",
+                                            "where": "@less(item()?['body']?['$applicationHttp']?['statusCode'],300)"
+                                          }
+                                        },
+                                        "Filter_Failed": {
+                                          "runAfter": {
+                                            "Filter_Succeeded": [
+                                              "Succeeded"
+                                            ]
+                                          },
+                                          "type": "Query",
+                                          "inputs": {
+                                            "from": "@body('Execute_Batch')?['$multipart']\n\n  \n\n  ",
+                                            "where": "@not(equals(item()?['body']?['$applicationHttp']?['statusCode'],200))"
+                                          }
+                                        },
+                                        "Increment_varTotalDeleted": {
+                                          "runAfter": {
+                                            "Filter_Failed": [
+                                              "Succeeded"
+                                            ]
+                                          },
+                                          "type": "IncrementVariable",
+                                          "inputs": {
+                                            "name": "varTotalDeleted",
+                                            "value": "@length(body('Filter_Succeeded'))\n\n  \n\n  \n\n  "
+                                          }
+                                        },
+                                        "Increment_varTotalFailed": {
+                                          "runAfter": {
+                                            "Increment_varTotalDeleted": [
+                                              "Succeeded"
+                                            ]
+                                          },
+                                          "type": "IncrementVariable",
+                                          "inputs": {
+                                            "name": "varTotalFailed",
+                                            "value": "@length(body('Filter_Failed'))\n\n  \n\n  \n\n  "
+                                          }
+                                        },
+                                        "Has_Failed_Items_in_Batch": {
+                                          "actions": {
+                                            "Query_Failed_Items_in_Batch": {
+                                              "type": "OpenApiConnection",
+                                              "inputs": {
+                                                "parameters": {
+                                                  "dataset": "@items('Each_TargetList')?['SiteUrl']",
+                                                  "parameters/method": "POST",
+                                                  "parameters/uri": "_api/web/lists/getbytitle('@{items('Each_TargetList')?['ListName']}')/GetItems",
+                                                  "parameters/headers": {
+                                                    "Accept": "application/json;odata=nometadata",
+                                                    "Content-Type": "application/json;odata=nometadata"
+                                                  },
+                                                  "parameters/body": "{\n  \"query\": {\n    \"ViewXml\": \"<View><Query><Where><And><Gte><FieldRef Name='ID'/><Value Type='Counter'>@{first(outputs('Compose_CurrentBatchItems'))?['ID']}</Value></Gte><Lte><FieldRef Name='ID'/><Value Type='Counter'>@{last(outputs('Compose_CurrentBatchItems'))?['ID']}</Value></Lte></And></Where></Query><ViewFields><FieldRef Name='ID'/><FieldRef Name='Title'/><FieldRef Name='@{variables('varCleanupDateField')}'/></ViewFields></View>\"\n  }\n}"
+                                                },
+                                                "host": {
+                                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                                                  "operationId": "HttpRequest",
+                                                  "connectionName": "shared_sharepointonline"
+                                                }
+                                              }
+                                            },
+                                            "Format_Failed_Items_Metadata": {
+                                              "runAfter": {
+                                                "Query_Failed_Items_in_Batch": [
+                                                  "Succeeded"
+                                                ]
+                                              },
+                                              "type": "Select",
+                                              "inputs": {
+                                                "from": "@body('Query_Failed_Items_in_Batch')?['value']\n\n  \n\n  ",
+                                                "select": {
+                                                  "ID": "@item()?['ID']",
+                                                  "Title": "@{item()?['Title']}",
+                                                  "ItemDate": "@{item()?[variables('varCleanupDateField')]}",
+                                                  "ListName": "@{items('Each_TargetList')?['ListName']}",
+                                                  "SiteUrl": "@{items('Each_TargetList')?['SiteUrl']}",
+                                                  "FailureReason": "FailedToRecycle",
+                                                  "Timestamp": "@{utcNow()}"
+                                                }
+                                              }
+                                            },
+                                            "Accumulate_varFailedItems": {
+                                              "runAfter": {
+                                                "Compose_MergedFailedItems": [
+                                                  "Succeeded"
+                                                ]
+                                              },
+                                              "type": "SetVariable",
+                                              "inputs": {
+                                                "name": "varFailedItems",
+                                                "value": "@outputs('Compose_MergedFailedItems')"
+                                              }
+                                            },
+                                            "Compose_MergedFailedItems": {
+                                              "runAfter": {
+                                                "Format_Failed_Items_Metadata": [
+                                                  "Succeeded"
+                                                ]
+                                              },
+                                              "type": "Compose",
+                                              "inputs": "@union(variables('varFailedItems'), body('Format_Failed_Items_Metadata'))\n\n  \n\n  \n\n  "
+                                            }
+                                          },
+                                          "runAfter": {
+                                            "Increment_varTotalFailed": [
+                                              "Succeeded"
+                                            ]
+                                          },
+                                          "else": {
+                                            "actions": {}
+                                          },
+                                          "expression": {
+                                            "and": [
+                                              {
+                                                "greater": [
+                                                  "@length(body('Filter_Failed'))",
+                                                  0
+                                                ]
+                                              }
+                                            ]
+                                          },
+                                          "type": "If"
+                                        }
+                                      },
+                                      "runAfter": {
+                                        "Safety_Ceiling_Check_for_max_items_to_process_to_avoid_mass_deletion": [
+                                          "Succeeded"
+                                        ]
+                                      },
+                                      "else": {
+                                        "actions": {
+                                          "Advance_cursor": {
+                                            "type": "SetVariable",
+                                            "inputs": {
+                                              "name": "varLastId",
+                                              "value": "@int(last(outputs('Compose_CurrentBatchItems'))?['ID'])\n\n  \n\n  \n\n  "
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "expression": {
+                                        "and": [
+                                          {
+                                            "equals": [
+                                              "@variables('varMode')",
+                                              "Execute"
+                                            ]
+                                          }
+                                        ]
+                                      },
+                                      "type": "If"
+                                    }
+                                  }
+                                },
+                                "expression": {
+                                  "and": [
+                                    {
+                                      "equals": [
+                                        "@outputs('Compose_CurrentBatchCount_')",
+                                        0
+                                      ]
+                                    }
+                                  ]
+                                },
+                                "type": "If"
+                              }
+                            },
+                            "expression": "@equals(equals(variables('varListComplete'), true),true)",
+                            "limit": {
+                              "count": 5000,
+                              "timeout": "PT4H"
+                            },
+                            "type": "Until"
+                          },
+                          "Were_there_any_failed_items": {
+                            "actions": {
+                              "Create_HTML_table": {
+                                "type": "Table",
+                                "inputs": {
+                                  "from": "@variables('varFailedItems')",
+                                  "format": "HTML"
+                                }
+                              }
+                            },
+                            "runAfter": {
+                              "Process_Target_List_in_Keyset_Batches": [
+                                "Succeeded"
+                              ]
+                            },
+                            "else": {
+                              "actions": {}
+                            },
+                            "expression": {
+                              "and": [
+                                {
+                                  "greater": [
+                                    "@length(variables('varFailedItems'))",
+                                    0
+                                  ]
+                                }
+                              ]
+                            },
+                            "type": "If"
+                          }
+                        },
+                        "runAfter": {
+                          "Reset_varListCandidateCount": [
+                            "Succeeded"
+                          ]
+                        },
+                        "type": "Scope"
+                      },
+                      "TargetList_ErrorHandler": {
+                        "actions": {
+                          "Compose_ListErrorLog": {
+                            "type": "Compose",
+                            "inputs": "Cleanup failed on target list: @{items('Each_TargetList')?['ListName']}. Error Details: @{result('TargetList_ExecutionScope')}"
+                          }
+                        },
+                        "runAfter": {
+                          "TargetList_ExecutionScope": [
+                            "Succeeded",
+                            "TimedOut",
+                            "Failed"
+                          ]
+                        },
+                        "type": "Scope"
+                      }
+                    }
+                  },
+                  "expression": {
+                    "and": [
+                      {
+                        "equals": [
+                          "@contains(outputs('Compose_ProtectedLists'), items('Each_TargetList')?['ListName'])",
+                          true
+                        ]
+                      }
+                    ]
+                  },
+                  "type": "If"
+                }
+              },
+              "runAfter": {
+                "Increment_varConfigsProcessed": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Foreach",
+              "runtimeConfiguration": {
+                "concurrency": {
+                  "repetitions": 1
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Any_active_configs_found": [
+              "Succeeded"
+            ]
+          },
+          "type": "Foreach",
+          "runtimeConfiguration": {
+            "concurrency": {
+              "repetitions": 1
+            }
+          }
+        },
+        "Send_an_email_(V2)": {
+          "runAfter": {
+            "Compose_HtmlEmailBody": [
+              "Succeeded"
+            ]
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "emailMessage/To": "@variables('varToEmails')",
+              "emailMessage/Subject": "SPO Cleanup [@{variables('varMode')}]: @{variables('varTotalDeleted')} deleted, @{variables('varTotalFailed')} failed",
+              "emailMessage/Body": "@outputs('Compose_HtmlEmailBody')",
+              "emailMessage/Importance": "Normal"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+              "operationId": "SendEmailV2",
+              "connectionName": "shared_office365"
+            }
+          }
+        },
+        "Initialize_varFailedItems": {
+          "runAfter": {
+            "Init_varBatchItems": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varFailedItems",
+                "type": "array",
+                "value": []
+              }
+            ]
+          }
+        },
+        "Compose_HtmlEmailBody": {
+          "runAfter": {
+            "Each_Config": [
+              "Succeeded"
+            ]
+          },
+          "type": "Compose",
+          "inputs": "<div style=\"font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; max-width: 650px; margin: 0 auto; color: #323130; line-height: 1.5;\">\n  \n  <!-- Header Bar -->\n  <div style=\"background-color: #0078D4; color: #ffffff; padding: 18px 24px; border-radius: 8px 8px 0 0;\">\n    <h2 style=\"margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.2px;\">SharePoint Cleanup Execution Report</h2>\n    <p style=\"margin: 6px 0 0 0; font-size: 13px; opacity: 0.9;\">\n      Mode: <strong>@{variables('varMode')}</strong> &nbsp;|&nbsp; Completed: @{utcNow('yyyy-MM-dd HH:mm:ss')} UTC\n    </p>\n  </div>\n\n  <!-- Body Container -->\n  <div style=\"border: 1px solid #edebe9; border-top: none; padding: 24px; border-radius: 0 0 8px 8px; background-color: #ffffff;\">\n    \n    <!-- Success / Failure Status Alert -->\n    <div style=\"padding: 12px 16px; border-radius: 4px; margin-bottom: 20px; font-weight: 600; font-size: 14px; background-color: @{if(greater(variables('varTotalFailed'), 0), '#fde7e9', '#dff6dd')}; color: @{if(greater(variables('varTotalFailed'), 0), '#a80000', '#107c41')}; border-left: 4px solid @{if(greater(variables('varTotalFailed'), 0), '#d13438', '#107c41')};\">\n      @{if(greater(variables('varTotalFailed'), 0), concat('⚠️ Completed with ', variables('varTotalFailed'), ' failure(s). Check Dataverse for error details.'), '✅ Cleanup completed successfully with zero errors!')}\n    </div>\n\n    <!-- Summary Metrics Table -->\n    <table style=\"width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 10px;\">\n      <thead>\n        <tr style=\"background-color: #f3f2f1; border-bottom: 2px solid #e1dfdd;\">\n          <th style=\"padding: 10px 14px; text-align: left; font-weight: 600; color: #605e5c; width: 45%;\">Metric</th>\n          <th style=\"padding: 10px 14px; text-align: left; font-weight: 600; color: #605e5c;\">Value</th>\n        </tr>\n      </thead>\n      <tbody>\n<tr style=\"border-bottom: 1px solid #edebe9; background-color: #faf9f8;\">\n  <td style=\"padding: 10px 14px; font-weight: 500; color: #605e5c;\">Deletion Method</td>\n  <td style=\"padding: 10px 14px; font-weight: 600; color: @{if(variables('varUseRecycleBin'), '#0078D4', '#d13438')};\">\n    @{if(variables('varUseRecycleBin'), '♻️ Recycle Bin (93-day recovery)', '🗑️ Permanent Purge (Unrecoverable)')}\n  </td>\n</tr>\n        <tr style=\"border-bottom: 1px solid #edebe9;\">\n          <td style=\"padding: 10px 14px; font-weight: 500; color: #605e5c;\">Target Site</td>\n          <td style=\"padding: 10px 14px;\"><a href=\"@{variables('varSiteUrl')}\" style=\"color: #0078D4; text-decoration: none;\">@{variables('varSiteUrl')}</a></td>\n        </tr>\n        <tr style=\"border-bottom: 1px solid #edebe9;\">\n          <td style=\"padding: 10px 14px; font-weight: 500; color: #605e5c;\">Run ID</td>\n          <td style=\"padding: 10px 14px; font-family: monospace; font-size: 12px; color: #605e5c;\">@{variables('varRunId')}</td>\n        </tr>\n        <tr style=\"border-bottom: 1px solid #edebe9; background-color: #faf9f8;\">\n          <td style=\"padding: 10px 14px; font-weight: 600; color: #323130;\">Total Candidates Found</td>\n          <td style=\"padding: 10px 14px; font-weight: 700; color: #323130; font-size: 15px;\">@{variables('varTotalCandidates')}</td>\n        </tr>\n        <tr style=\"border-bottom: 1px solid #edebe9;\">\n          <td style=\"padding: 10px 14px; font-weight: 600; color: #107c41;\">Total Succeeded</td>\n          <td style=\"padding: 10px 14px; font-weight: 700; color: #107c41; font-size: 15px;\">@{variables('varTotalDeleted')}</td>\n        </tr>\n        <tr style=\"border-bottom: 1px solid #edebe9; background-color: #faf9f8;\">\n          <td style=\"padding: 10px 14px; font-weight: 600; color: @{if(greater(variables('varTotalFailed'), 0), '#d13438', '#605e5c')};\">Total Failed</td>\n          <td style=\"padding: 10px 14px; font-weight: 700; color: @{if(greater(variables('varTotalFailed'), 0), '#d13438', '#107c41')}; font-size: 15px;\">@{variables('varTotalFailed')}</td>\n        </tr>\n      </tbody>\n    </table>\n\n  </div>\n</div>"
+        },
+        "Init_varUseRecycleBin": {
+          "runAfter": {
+            "Initialize_varExtenderChildMappingListName": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varUseRecycleBin",
+                "type": "boolean",
+                "value": "@parameters('Use Recycle Bin (mr_UseRecycleBin)')"
+              }
+            ]
+          }
+        },
+        "Initialize_varMasterConfigListName": {
+          "runAfter": {},
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varMasterConfigListName",
+                "type": "string",
+                "value": "@parameters('Master Config List Title (mr_MasterConfigListName)')"
+              }
+            ]
+          }
+        },
+        "Initialize_varExtenderChildMappingListName": {
+          "runAfter": {
+            "Initialize_varMasterConfigListName": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varExtenderChildMappingListName",
+                "type": "string",
+                "value": "@parameters('Extender Child Mapping List Name  (mr_ExtenderChildMappingListName)')"
+              }
+            ]
+          }
+        },
+        "Initialize_varToEmails": {
+          "runAfter": {
+            "Init_varCleanupDateField": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varToEmails",
+                "type": "string",
+                "value": "@parameters('Email Alert To Addresses (mr_AlertToEmails)')"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}
